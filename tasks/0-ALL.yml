@@ -1,0 +1,94 @@
+---
+- name: Ansible project to join Active Directory automatically
+  hosts: all
+  become: true
+  gather_facts: no 
+  tasks:  
+  - name: Update all packages
+    package:
+       name=*  
+       state=latest 
+       update_cache=true
+
+  tasks:
+  - name: Install packages to join domain for RedHat OS Family
+    package:
+      name:
+        - realmd
+        - sssd
+        - oddjob
+        - oddjob-mkhomedir
+        - adcli
+        - samba-common-tools
+        - krb5-workstation
+      state: present
+    when: ansible_os_family == 'RedHat'
+
+  - name: Install packages to join domain for Debian OS Family
+    apt:
+      name:
+        - realmd
+        - sssd
+        - sssd-tools
+        - libnss-sss
+        - libpam-sss
+        - adcli
+        - krb5-user
+        - samba-common
+        - samba-common-bin
+        - samba-libs
+        - oddjob
+        - oddjob-mkhomedir
+        - packagekit
+        - python-pexpect
+      state: present
+    when: ansible_os_family == 'Debian'
+
+  vars_prompt:
+    - name: "name_ad"
+      prompt: "Provide the domain name"
+      private: no      
+    - name: "bind_user"
+      prompt: "Provide LDAP bind username"
+      private: no
+    - name: "bind_password"
+      prompt: "Password"
+      private: yes
+    - name: "group_allowed_to_connect"
+      prompt: "Provide the authorized  group to connect"
+      private: no
+
+  tasks:
+    - name: Join system to AD
+      expect:
+        command: /bin/bash -c "/usr/sbin/realm join {{ name_ad }} -U {{ bind_user}}"
+        responses:
+          Password for *: "{{ bind_password }}"
+
+    - name: Add default_domain_suffix to sssd.conf
+      lineinfile:
+        dest: /etc/sssd/sssd.conf
+        line: 'default_domain_suffix = {{ name_ad }}'
+        insertafter: '^\[sssd\]'
+      notify:
+        - restart sssd
+
+    - name: Allow the AD group to logon to the system
+      command: /bin/bash -c "/usr/sbin/realm permit -g {{ group_allowed_to_connect }}@{{ name_ad }}"
+
+    - name: Add the same AD Group to sudoers
+      lineinfile:
+        dest: /etc/sudoers
+        line: '%{{ group_allowed_to_connect }}@{{ name_ad }}        ALL=(ALL)       ALL'
+        insertafter: '^%wheel'
+
+  handlers:
+    - name: restart realmd
+      service:
+        name: realmd
+        state: restarted
+
+    - name: restart sssd
+      service:
+        name: sssd
+        state: restarted

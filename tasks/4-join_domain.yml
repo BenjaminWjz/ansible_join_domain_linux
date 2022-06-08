@@ -1,0 +1,54 @@
+---
+- name: JOIN DOMAIN 
+  hosts: all
+  gather_facts: no
+  become: yes
+  become_method: sudo
+  vars_prompt:
+    - name: "name_ad"
+      prompt: "Provide the domain name"
+      private: no      
+    - name: "bind_user"
+      prompt: "Provide LDAP bind username"
+      private: no
+    - name: "bind_password"
+      prompt: "Password"
+      private: yes
+    - name: "group_allowed_to_connect"
+      prompt: "Provide the authorized  group to connect"
+      private: no
+
+  tasks:
+    - name: Join system to AD
+      expect:
+        command: /bin/bash -c "/usr/sbin/realm join {{ name_ad }} -U {{ bind_user}}"
+        responses:
+          Password for *: "{{ bind_password }}"
+
+    - name: Add default_domain_suffix to sssd.conf
+      lineinfile:
+        dest: /etc/sssd/sssd.conf
+        line: 'default_domain_suffix = {{ name_ad }}'
+        insertafter: '^\[sssd\]'
+      notify:
+        - restart sssd
+
+    - name: Allow the AD group to logon to the system
+      command: /bin/bash -c "/usr/sbin/realm permit -g {{ group_allowed_to_connect }}@{{ name_ad }}"
+
+    - name: Add the same AD Group to sudoers
+      lineinfile:
+        dest: /etc/sudoers
+        line: '%{{ group_allowed_to_connect }}@{{ name_ad }}        ALL=(ALL)       ALL'
+        insertafter: '^%wheel'
+
+  handlers:
+    - name: restart realmd
+      service:
+        name: realmd
+        state: restarted
+
+    - name: restart sssd
+      service:
+        name: sssd
+        state: restarted

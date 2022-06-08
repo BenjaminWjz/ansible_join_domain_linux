@@ -1,0 +1,11 @@
+---
+- name: RENAME SYSTEM
+  hosts: all
+  become: true
+  tasks:
+  - name: Set hostnames
+    hostname:
+      name: "{{ new_hostname }}"
+      
+  - name: restart host
+    reboot:

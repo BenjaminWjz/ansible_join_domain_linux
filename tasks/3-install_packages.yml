@@ -1,0 +1,38 @@
+---
+- name: PACKAGES INSTALLATION
+  hosts:
+    - all
+  become: true
+  tasks:
+  - name: Install packages to join domain for RedHat OS Family
+    package:
+      name:
+        - realmd
+        - sssd
+        - oddjob
+        - oddjob-mkhomedir
+        - adcli
+        - samba-common-tools
+        - krb5-workstation
+      state: present
+    when: ansible_os_family == 'RedHat'
+  
+  - name: Install packages to join domain for Debian OS Family
+    apt:
+      name:
+        - realmd
+        - sssd
+        - sssd-tools
+        - libnss-sss
+        - libpam-sss
+        - adcli
+        - krb5-user
+        - samba-common
+        - samba-common-bin
+        - samba-libs
+        - oddjob
+        - oddjob-mkhomedir
+        - packagekit
+        - python-pexpect
+      state: present
+    when: ansible_os_family == 'Debian'
