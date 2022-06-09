@@ -17,7 +17,7 @@ If you want, there are details of the steps :
 
 # How to run a playbook
 
-1. Modify inventory file :
+## 1. Modify inventory file :
 Add your IP
 > 0.0.0.0 (ansible_ssh_user=[default_account]) (new_hostname=[hostname])
 
@@ -27,7 +27,7 @@ Exemple :
 192.168.1.1 ansible_ssh_user=rocky new_hostname=ROCKY001 
 ```
 
-2. Navigate to the project root
+## 2. Navigate to the project root
 > ansible-playbook tasks/[filename_step] test/inventory
 
 Exemple to run the first task :
